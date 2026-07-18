@@ -1,0 +1,6 @@
+dist/
+node_modules/
+public/skills/
+public/.well-known/
+test-results/
+playwright-report/

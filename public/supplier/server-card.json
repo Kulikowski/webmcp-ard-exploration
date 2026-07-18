@@ -1,0 +1,8 @@
+{
+  "name": "Forge Titan Module Supplier",
+  "description": "Demo Streamable HTTP MCP supplier for modular robot components.",
+  "url": "/mcp",
+  "transport": "streamable-http",
+  "protocolVersion": "2025-11-25",
+  "tools": ["list_catalog", "check_stock", "order_part", "get_order_status"]
+}

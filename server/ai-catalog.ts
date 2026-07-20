@@ -72,16 +72,6 @@ export function createAiCatalog(origin: string) {
         { experimentalMediaType: true, status: 'example-grade' },
       ),
       entry(
-        'urn:air:forgetitan.local:skill:recover-load-test',
-        'Recover Forge Titan from a failed load test',
-        'application/ai-skill',
-        absolute('/skills/recover-forge-titan-load-test.md'),
-        'State-specific recovery guidance for the seeded shoulder-bus coupling fault.',
-        ['LoadTestDiagnosis', 'PowerBusRecovery'],
-        ['recover Forge Titan after a failed load test', 'repair a shoulder bus coupling fault'],
-        { experimentalMediaType: true, status: 'example-grade' },
-      ),
-      entry(
         'urn:air:forgetitan.local:skill:maintain-coolant-loop',
         'Maintain the Forge Titan coolant loop',
         'application/ai-skill',

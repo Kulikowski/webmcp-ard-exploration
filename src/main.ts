@@ -25,22 +25,21 @@ import {
   TOOLS,
   STAGES,
   STAGE_NAMES,
-  RECOVERY_SEQUENCE,
   PAGE_SCHEMAS,
   READ_ONLY_TOOLS,
   type AssemblyState,
   type ExperimentMode,
 } from './assembly-state';
 import {
-  getWebMcpHost,
   executeWebMcpTool,
   registerAllTools,
   liveRegisteredToolNames,
   type RegisteredToolDef,
 } from './webmcp';
 import { escapeHtml, renderMarkdown, prettyActivity, protocolPill, toolChannel } from './format';
-import skillText from '../skills/assemble-forge-titan.md?raw';
 import './style.css';
+
+const ASSEMBLY_SKILL_ID = 'urn:air:forgetitan.local:skill:assemble-forge-titan';
 
 // ---- Application state (the composition root's own mutable singleton) --------------
 
@@ -143,7 +142,7 @@ const closeTurnTiming = () => {
 // ---- DOM shell -----------------------------------------------------------------------
 
 document.querySelector('#app')!.innerHTML =
-  `<div class="shell"><main><section class="console" aria-label="Agent interaction workspace"><div class="console-nav"><nav class="tabs" aria-label="Console views"><button data-tab="tools">Tools</button><button data-tab="skills">Skills</button><button data-tab="agent" class="active">Agent</button></nav><span class="count"></span><label class="mode-wrap" for="mode"><span>Experiment</span><select id="mode"><option value="static">Static tools | no skill</option><option value="static+catalog-skill">Static tools + catalog skill</option><option value="dynamic">Dynamic tools | no skill</option><option value="catalog-skill">Dynamic tools + catalog skill</option></select></label></div><div class="tabbody"></div></section><section class="viewport" aria-label="Forge Titan 3D preview"><div class="hud"><div class="hud-top"><span class="badge">Live robot state</span><span class="badge" id="buildState">Unassembled</span></div><div class="stage-info"><div class="eyebrow" id="stationNumber">Station 01 / 06</div><h2 id="stationName"></h2><p id="stationDesc"></p></div><div class="orbit-hint">Drag to rotate</div></div></section></main></div><div class="toast" role="status" aria-live="polite"></div><dialog id="skillDialog" class="skill-dialog" closedby="any"><div class="modal-head"><h2>Loaded skill</h2><form method="dialog"><button class="x" aria-label="Close skill">Close</button></form></div><div class="modal-body"><pre></pre></div></dialog>`;
+  `<div class="shell"><main><section class="console" aria-label="Agent interaction workspace"><div class="console-nav"><nav class="tabs" aria-label="Console views"><button data-tab="tools">Tools</button><button data-tab="skills">Skills</button><button data-tab="agent" class="active">Agent</button></nav><span class="count"></span><label class="mode-wrap" for="mode"><span>Experiment</span><select id="mode"><option value="static">Static tools | no skill</option><option value="static+catalog-skill">Static tools + catalog skill</option><option value="dynamic">Dynamic tools | no skill</option><option value="catalog-skill">Dynamic tools + catalog skill</option></select></label></div><div class="tabbody"></div></section><section class="viewport" aria-label="Forge Titan 3D preview"><div class="hud"><div class="hud-top"><span class="badge">Live robot state</span><span class="badge" id="buildState">Unassembled</span></div><div class="stage-info"><div class="eyebrow" id="stationNumber">Station 01 / 06</div><h2 id="stationName"></h2><p id="stationDesc"></p></div><div class="orbit-hint">Drag to rotate</div></div></section></main></div><div class="toast" role="status" aria-live="polite"></div><dialog id="skillDialog" class="skill-dialog" closedby="any"><div class="modal-head"><h2>Skill instructions</h2><form method="dialog"><button class="x" aria-label="Close skill">Close</button></form></div><div class="modal-body"><pre></pre></div></dialog>`;
 
 const $ = <T extends Element = HTMLElement>(s: string): T => document.querySelector<T>(s)!;
 const $$ = (s: string): HTMLElement[] => [...document.querySelectorAll<HTMLElement>(s)];
@@ -431,9 +430,7 @@ async function fetchCatalogSkill(
   const catalog = harnessCatalog || (await fetchAiCatalog());
   harnessCatalog = catalog;
   const entry = catalog.entries?.find(
-    (e) =>
-      e.type === 'application/ai-skill' &&
-      e.identifier === 'urn:air:forgetitan.local:skill:assemble-forge-titan',
+    (e) => e.type === 'application/ai-skill' && e.identifier === ASSEMBLY_SKILL_ID,
   );
   if (!entry?.url) throw new Error('AI catalog lists no Forge Titan assembly skill resource');
   const skillResponse = await fetchCatalogResource(entry, { signal });
@@ -984,10 +981,47 @@ function renderAgent(): string {
   return `<div class="agent-controls"><details class="agent-config"><summary><span>Model</span><strong>${providerLabel} · ${modelLabel}</strong></summary><div class="config-grid"><label>Provider<select id="agentProvider">${providerOptions}</select></label><label>Model<select id="agentModel">${modelOptions}</select></label><label class="wide">API key<input id="agentKey" type="password" value="${escapeHtml(key)}" autocomplete="off" placeholder="${PROVIDERS.find((p) => p.id === provider)?.keyPlaceholder || ''}"></label><small class="wide">Stored only in this browser and sent directly to the selected provider. Use a demo credential.</small><button type="button" id="clearAgentKeys" class="danger">Delete saved keys</button></div></details><div class="score" aria-label="Run metrics"><span><b>${agentStats.modelCalls}</b> model</span><span><b>${agentStats.toolCalls}</b> tools</span><span class="${agentStats.errors ? 'has-errors' : ''}"><b>${agentStats.errors}</b> errors</span><span title="Side-path page calls that never advance the assembly mission"><b>${state.sideCalls}</b> off-path</span><span title="Calls to tools missing from the toolset sent to the model: hallucinated, or unregistered after a state change"><b>${agentStats.unavailableCalls}</b> unavailable</span><span><b>${elapsed}s</b></span><button type="button" id="exportRun" ${agentRunning || !agentStats.startedAt ? 'disabled' : ''}>Export</button></div></div><div class="agent-chat">${transcript || '<div class="empty agent-empty"><strong>No run yet</strong><span>Start the assembly agent or inspect the tools it can currently reach.</span></div>'}</div><form id="agentForm"><input id="agentInput" autocomplete="off" placeholder="Message the assembly agent…" aria-label="Message to assembly agent" ${agentRunning ? 'disabled' : ''}><button type="submit" class="${agentRunning ? 'stop-agent' : ''}" ${agentStopping ? 'disabled' : ''} aria-label="${agentRunning ? 'Stop agent execution' : 'Send message to agent'}" title="${agentRunning ? 'Stop' : 'Send'}">${agentRunning ? '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>' : '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V3M8 3 3.5 7.5M8 3l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'}</button><button type="button" class="prompt-chip" id="reset" title="Reset the experiment: assembly, discovery, transcript, and metrics" ${manualRunning ? 'disabled' : ''}>Reset</button><button type="button" class="assemble-btn" data-prompt="Assemble, test, and deploy Forge Titan." title="Assemble, test, and deploy Forge Titan." ${agentRunning ? 'disabled' : ''}>Assemble</button></form><div class="manual-row"><button type="button" id="manualNext" title="Deterministic walkthrough helper: runs the next expected action through WebMCP, no model involved" ${manualRunning || agentRunning || state.shipped ? 'disabled' : ''} aria-busy="${manualRunning}">${manualRunning ? manualStatus || 'Working...' : state.shipped ? 'Forge Titan deployed' : nextAction ? 'Manual next step: ' + nextAction.name : 'No action available'}</button></div>`;
 }
 
-function showSkill() {
+/** Fetches a catalog skill's real content on demand and shows it - reusing the
+ *  harness's already-fetched copy for the assembly skill (avoiding a duplicate
+ *  request) but doing a genuine live fetch for every other skill, since this
+ *  demo never fetches those automatically. */
+async function showSkill(entry: CatalogEntry) {
   const dialog = $<HTMLDialogElement>('#skillDialog');
-  dialog.querySelector('pre')!.textContent = skillText;
+  dialog.querySelector('h2')!.textContent = entry.displayName;
+  const pre = dialog.querySelector('pre')!;
+  pre.textContent = `Fetching ${entry.url} ...`;
   dialog.showModal();
+  try {
+    const text =
+      entry.identifier === ASSEMBLY_SKILL_ID && catalogSkill
+        ? catalogSkill.text
+        : await (await fetchCatalogResource(entry)).text();
+    pre.textContent = text;
+  } catch (error) {
+    pre.textContent = 'Failed to load this skill: ' + (error as Error).message;
+  }
+}
+
+function renderSkillCard(entry: CatalogEntry): string {
+  const isAssemblySkill = entry.identifier === ASSEMBLY_SKILL_ID;
+  const status = isAssemblySkill
+    ? catalogSkill
+      ? 'CATALOG LOADED'
+      : 'CATALOG MODE'
+    : 'ADVERTISED ONLY';
+  const note = isAssemblySkill
+    ? 'Resolved from /.well-known/ai-catalog.json automatically, before the first model call in this mode.'
+    : "Advertised in the catalog; this demo's harness never fetches it automatically. Inspect it to fetch it yourself.";
+  return `<div class="tool"><div class="tool-top"><span class="dot"></span><code>${escapeHtml(entry.displayName)}</code><span class="skill-pill">${status}</span></div><p>${escapeHtml(entry.description)} ${note}</p><button data-inspect-skill="${escapeHtml(entry.identifier)}">INSPECT INSTRUCTIONS</button></div>`;
+}
+
+function renderSkillsPanel(): string {
+  if (!catalogModeSelected())
+    return '<div class="empty">No skill is provided in this experiment mode.<br>The agent must infer the workflow from tools and results.</div>';
+  if (!harnessCatalog) return '<div class="empty">Reading the catalog...</div>';
+  const skillEntries = harnessCatalog.entries.filter((e) => e.type === 'application/ai-skill');
+  if (!skillEntries.length) return '<div class="empty">The catalog advertises no skills.</div>';
+  return skillEntries.map(renderSkillCard).join('');
 }
 
 function renderConsole() {
@@ -998,15 +1032,7 @@ function renderConsole() {
   $$('.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === activeTab));
   const body = $('.tabbody');
   if (activeTab === 'tools') body.innerHTML = renderToolsPanel();
-  if (activeTab === 'skills') {
-    if (!catalogModeSelected())
-      body.innerHTML =
-        '<div class="empty">No skill is provided in this experiment mode.<br>The agent must infer the workflow from tools and results.</div>';
-    else {
-      const skillStatus = catalogSkill ? 'CATALOG LOADED' : 'CATALOG MODE';
-      body.innerHTML = `<div class="tool"><div class="tool-top"><span class="dot"></span><code>assemble-forge-titan</code><span class="skill-pill">${skillStatus}</span></div><p>Mission skill resolved from /.well-known/ai-catalog.json before the first model call. The catalog also advertises coolant-maintenance and paint skills the mission never needs.</p><button id="inspectSkill">INSPECT INSTRUCTIONS</button></div>`;
-    }
-  }
+  if (activeTab === 'skills') body.innerHTML = renderSkillsPanel();
   if (activeTab === 'agent') {
     body.innerHTML = renderAgent();
     requestAnimationFrame(() => {
@@ -1140,7 +1166,10 @@ $('.tabbody').addEventListener('click', (e) => {
   if (target.dataset.discoveryTool) callDiscoveryFromPanel();
   if (target.dataset.mcpTool)
     callMcpToolFromPanel(target.dataset.mcpTool, target.closest<HTMLElement>('[data-mcp-card]')!);
-  if (target.id === 'inspectSkill') showSkill();
+  if (target.dataset.inspectSkill) {
+    const entry = harnessCatalog?.entries.find((e) => e.identifier === target.dataset.inspectSkill);
+    if (entry) showSkill(entry);
+  }
   if (target.dataset.prompt) runWorkshopAgent(target.dataset.prompt);
   if (target.id === 'manualNext') runNextManually();
   if (target.id === 'reset') initializeExperimentMode('reset button');

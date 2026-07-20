@@ -49,27 +49,6 @@
       }
     },
     {
-      "identifier": "urn:air:forgetitan.local:skill:recover-load-test",
-      "displayName": "Recover Forge Titan from a failed load test",
-      "type": "application/ai-skill",
-      "url": "http://127.0.0.1:8787/skills/recover-forge-titan-load-test.md",
-      "description": "State-specific recovery guidance for the seeded shoulder-bus coupling fault.",
-      "capabilities": [
-        "LoadTestDiagnosis",
-        "PowerBusRecovery"
-      ],
-      "representativeQueries": [
-        "recover Forge Titan after a failed load test",
-        "repair a shoulder bus coupling fault"
-      ],
-      "version": "1.0.0",
-      "updatedAt": "2026-07-18T00:00:00Z",
-      "metadata": {
-        "experimentalMediaType": true,
-        "status": "example-grade"
-      }
-    },
-    {
       "identifier": "urn:air:forgetitan.local:skill:maintain-coolant-loop",
       "displayName": "Maintain the Forge Titan coolant loop",
       "type": "application/ai-skill",

@@ -208,6 +208,9 @@ main {
 .config-grid .wide {
   grid-column: 1/-1;
 }
+#agentKey {
+  -webkit-text-security: disc;
+}
 .config-grid small {
   color: var(--muted-foreground);
   font-size: 0.72rem;

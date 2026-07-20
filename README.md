@@ -22,36 +22,12 @@ each. They exist so workflow knowledge has something to earn: without the
 assembly skill, nothing in the tool list says which capabilities the mission
 needs.
 
-The app is TypeScript throughout (browser code and the two local Node servers),
-built with Vite. The assembly workflow itself - `executeTool()` in
-[src/assembly-state.ts](src/assembly-state.ts) - is a pure function with no DOM
-or network access: it takes a state and a tool call and returns a new state, so
-it can be (and is) unit tested directly.
-
 ## Run it
 
 ```bash
 npm install
 npm run dev
 ```
-
-Vite mounts the supplier MCP endpoint at `/mcp` during development. To use the
-production-style local server:
-
-```bash
-npm run build
-npm start
-```
-
-## Tests
-
-```bash
-npm test          # Vitest - the assembly state machine, agent-core adapters, mcp-client, format helpers
-npm run test:e2e  # Playwright - runs the built app end to end via `npm run build && npm start`
-npm run typecheck # tsc --build, no emit
-```
-
-`test:e2e` needs a Chromium build once: `npx playwright install chromium`.
 
 ## What a run looks like
 
@@ -68,10 +44,9 @@ dynamic tools between model calls, shows its transcript and run statistics, and
 stores demo API keys only in browser-local storage. **Manual next step** is a
 deterministic walkthrough helper; it does not call a model.
 
-The seeded shortage of the shoulder actuator bracket is a real MCP detour. The
-browser agent discovers the supplier card through
+The seeded shortage of the shoulder actuator bracket is a real MCP detour. The agent discovers the supplier card through
 `/.well-known/ai-catalog.json`, initializes MCP, lists its tools, orders the
-missing module over Streamable HTTP, polls the order, and updates assembly-floor
+missing module, polls the order, and updates assembly-floor
 inventory after delivery. A deterministic load-test fault then checks whether
 the selected skill mode provides enough recovery guidance.
 
